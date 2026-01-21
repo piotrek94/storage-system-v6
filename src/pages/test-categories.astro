@@ -1,0 +1,287 @@
+---
+export const prerender = false;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Category API Test</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+      .section {
+        margin-bottom: 2rem;
+        padding: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+      }
+      button {
+        background: #0066cc;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 0.5rem 0.5rem 0.5rem 0;
+      }
+      button:hover {
+        background: #0052a3;
+      }
+      input {
+        padding: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        margin-right: 0.5rem;
+        min-width: 300px;
+      }
+      pre {
+        background: #f5f5f5;
+        padding: 1rem;
+        border-radius: 4px;
+        overflow-x: auto;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .error {
+        background: #fee;
+      }
+      .success {
+        background: #efe;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Category API Test Page</h1>
+    <p>This page allows you to test the Category API endpoints.</p>
+
+    <div class="section">
+      <h2>GET /api/categories</h2>
+      <p>List all categories with optional sorting</p>
+
+      <div>
+        <label>
+          Sort by:
+          <select id="sortField">
+            <option value="name">Name</option>
+            <option value="created_at">Created At</option>
+          </select>
+        </label>
+
+        <label>
+          Order:
+          <select id="sortOrder">
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+        </label>
+
+        <button id="listBtn">Fetch Categories</button>
+        <button id="listNoAuthBtn">Test Without Auth</button>
+      </div>
+
+      <pre id="listResult">Click "Fetch Categories" to load data...</pre>
+    </div>
+
+    <div class="section">
+      <h2>POST /api/categories</h2>
+      <p>Create a new category</p>
+
+      <div>
+        <input type="text" id="nameInput" placeholder="Category name (e.g., 'Outdoor Gear')" />
+        <button id="createBtn">Create Category</button>
+      </div>
+
+      <div style="margin-top: 1rem;">
+        <p>Quick tests:</p>
+        <button id="testEmpty">Test Empty Name</button>
+        <button id="testWhitespace">Test Whitespace</button>
+        <button id="testLong">Test Too Long (256 chars)</button>
+        <button id="testDuplicate">Test Duplicate</button>
+      </div>
+
+      <pre id="createResult">Enter a category name and click "Create Category"...</pre>
+    </div>
+
+    <div class="section">
+      <h2>Authentication Status</h2>
+      <pre id="authStatus">Checking authentication...</pre>
+      <button id="checkAuthBtn">Check Auth</button>
+    </div>
+
+    <script is:inline>
+      // Helper function to display results
+      function displayResult(elementId, data, isError) {
+        if (isError === undefined) isError = false;
+        const element = document.getElementById(elementId);
+        element.textContent = JSON.stringify(data, null, 2);
+        element.className = isError ? "error" : "success";
+      }
+
+      // Check authentication
+      async function checkAuth() {
+        try {
+          const res = await fetch("/api/categories");
+          if (res.status === 401) {
+            displayResult(
+              "authStatus",
+              {
+                status: "Not authenticated",
+                message: "You need to be logged in to use the API",
+              },
+              true
+            );
+          } else {
+            displayResult("authStatus", {
+              status: "Authenticated",
+              message: "You are logged in and can use the API",
+            });
+          }
+        } catch (err) {
+          displayResult(
+            "authStatus",
+            {
+              status: "Error",
+              message: err.message,
+            },
+            true
+          );
+        }
+      }
+
+      // GET /api/categories
+      document.getElementById("listBtn")?.addEventListener("click", async () => {
+        const sort = document.getElementById("sortField").value;
+        const order = document.getElementById("sortOrder").value;
+
+        try {
+          const res = await fetch(`/api/categories?sort=${sort}&order=${order}`);
+          const data = await res.json();
+          displayResult("listResult", data, res.status >= 400);
+        } catch (err) {
+          displayResult("listResult", { error: err.message }, true);
+        }
+      });
+
+      // Test without auth
+      document.getElementById("listNoAuthBtn")?.addEventListener("click", async () => {
+        try {
+          // Force no auth by using a different fetch context
+          const res = await fetch("/api/categories", {
+            credentials: "omit",
+          });
+          const data = await res.json();
+          displayResult("listResult", data, res.status >= 400);
+        } catch (err) {
+          displayResult("listResult", { error: err.message }, true);
+        }
+      });
+
+      // POST /api/categories
+      document.getElementById("createBtn")?.addEventListener("click", async () => {
+        const name = document.getElementById("nameInput").value;
+
+        try {
+          const res = await fetch("/api/categories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name }),
+          });
+          const data = await res.json();
+          displayResult("createResult", data, res.status >= 400);
+
+          // If successful, refresh the list
+          if (res.status === 201) {
+            document.getElementById("listBtn")?.click();
+          }
+        } catch (err) {
+          displayResult("createResult", { error: err.message }, true);
+        }
+      });
+
+      // Test empty name
+      document.getElementById("testEmpty")?.addEventListener("click", async () => {
+        try {
+          const res = await fetch("/api/categories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: "" }),
+          });
+          const data = await res.json();
+          displayResult("createResult", data, true);
+        } catch (err) {
+          displayResult("createResult", { error: err.message }, true);
+        }
+      });
+
+      // Test whitespace
+      document.getElementById("testWhitespace")?.addEventListener("click", async () => {
+        try {
+          const res = await fetch("/api/categories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: "   " }),
+          });
+          const data = await res.json();
+          displayResult("createResult", data, true);
+        } catch (err) {
+          displayResult("createResult", { error: err.message }, true);
+        }
+      });
+
+      // Test too long
+      document.getElementById("testLong")?.addEventListener("click", async () => {
+        const longName = "a".repeat(256);
+        try {
+          const res = await fetch("/api/categories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: longName }),
+          });
+          const data = await res.json();
+          displayResult("createResult", data, true);
+        } catch (err) {
+          displayResult("createResult", { error: err.message }, true);
+        }
+      });
+
+      // Test duplicate
+      document.getElementById("testDuplicate")?.addEventListener("click", async () => {
+        const testName = "Test Category For Duplicate";
+
+        // Create first one
+        await fetch("/api/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: testName }),
+        });
+
+        // Try to create duplicate
+        try {
+          const res = await fetch("/api/categories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: testName }),
+          });
+          const data = await res.json();
+          displayResult("createResult", data, true);
+        } catch (err) {
+          displayResult("createResult", { error: err.message }, true);
+        }
+      });
+
+      // Check auth button
+      document.getElementById("checkAuthBtn")?.addEventListener("click", checkAuth);
+
+      // Check auth on page load
+      checkAuth();
+    </script>
+  </body>
+</html>
