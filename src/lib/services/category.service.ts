@@ -1,0 +1,106 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '../../db/database.types';
+import type { CreateCategoryCommand, CategoryListItemDTO } from '../../types';
+
+/**
+ * Service layer for category-related operations
+ * 
+ * Handles business logic for category management including creation,
+ * retrieval, updates, and deletion while maintaining data integrity
+ * and enforcing business rules.
+ */
+export class CategoryService {
+  /**
+   * Creates a new category for the authenticated user
+   * 
+   * Business Rules:
+   * - Category names must be unique per user (case-insensitive)
+   * - New categories always have itemCount of 0
+   * - User ID is automatically associated from authentication context
+   * 
+   * @param supabase - Supabase client with user session
+   * @param userId - ID of the authenticated user
+   * @param command - Category creation command with validated name
+   * @returns Created category as CategoryListItemDTO
+   * @throws {Error} If category name already exists (code: '23505')
+   * @throws {Error} If database operation fails
+   */
+  static async createCategory(
+    supabase: SupabaseClient<Database>,
+    userId: string,
+    command: CreateCategoryCommand
+  ): Promise<CategoryListItemDTO> {
+    // Insert category into database
+    // RLS policy automatically enforces user_id = auth.uid()
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({
+        user_id: userId,
+        name: command.name, // Already trimmed by Zod transform
+      })
+      .select()
+      .single();
+
+    // Handle database errors - let route handler determine response code
+    if (error) {
+      throw error;
+    }
+
+    // Transform database row to DTO
+    // New categories always have 0 items
+    return {
+      id: data.id,
+      name: data.name,
+      itemCount: 0,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+  }
+
+  /**
+   * Lists all categories for the authenticated user with item counts
+   * 
+   * Business Rules:
+   * - Returns all user's categories (no pagination in MVP)
+   * - Each category includes computed item count via aggregation
+   * - RLS policies automatically filter to user's categories
+   * - Supports sorting by name or creation date
+   * - Supports ascending or descending order
+   * 
+   * @param supabase - Supabase client with user session
+   * @param userId - ID of the authenticated user
+   * @param sort - Field to sort by ("name" | "created_at")
+   * @param order - Sort direction ("asc" | "desc")
+   * @returns Array of categories with item counts as CategoryListItemDTO[]
+   * @throws {Error} If database operation fails
+   */
+  static async listCategories(
+    supabase: SupabaseClient<Database>,
+    userId: string,
+    sort: 'name' | 'created_at',
+    order: 'asc' | 'desc'
+  ): Promise<CategoryListItemDTO[]> {
+    // Query categories with item count aggregation
+    // Using Supabase's count() function for items
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name, created_at, updated_at, items(count)')
+      .eq('user_id', userId) // Explicit filter (RLS also enforces this)
+      .order(sort, { ascending: order === 'asc' });
+
+    // Handle database errors
+    if (error) {
+      throw error;
+    }
+
+    // Transform database rows to DTOs
+    // Map snake_case to camelCase and extract item count
+    return data.map((category) => ({
+      id: category.id,
+      name: category.name,
+      itemCount: category.items?.[0]?.count ?? 0, // Extract count from aggregation
+      createdAt: category.created_at,
+      updatedAt: category.updated_at,
+    }));
+  }
+}
