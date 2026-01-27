@@ -49,3 +49,43 @@ export const listCategoriesQuerySchema = z.object({
 });
 
 export type ListCategoriesQuerySchema = z.infer<typeof listCategoriesQuerySchema>;
+
+/**
+ * Validation schema for category ID route parameter
+ * 
+ * Enforces:
+ * - ID must be a valid UUID format
+ */
+export const categoryIdParamSchema = z.object({
+  id: z.string().uuid('Invalid category ID format'),
+});
+
+export type CategoryIdParamSchema = z.infer<typeof categoryIdParamSchema>;
+
+/**
+ * Validation schema for updating a category
+ * 
+ * Enforces:
+ * - Name is required and must be a string
+ * - Name length between 1 and 255 characters
+ * - Name cannot be only whitespace
+ * - Automatically trims whitespace from name
+ * 
+ * Note: Uses same validation rules as createCategorySchema
+ */
+export const updateCategorySchema = z.object({
+  name: z
+    .string({
+      required_error: 'Name is required',
+      invalid_type_error: 'Name must be a string',
+    })
+    .min(1, 'Name must be between 1 and 255 characters')
+    .max(255, 'Name must be between 1 and 255 characters')
+    .refine(
+      (val) => val.trim().length > 0,
+      'Name cannot be only whitespace'
+    )
+    .transform((val) => val.trim()),
+});
+
+export type UpdateCategorySchema = z.infer<typeof updateCategorySchema>;

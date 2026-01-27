@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../../db/database.types';
-import type { CreateCategoryCommand, CategoryListItemDTO } from '../../types';
+import type { CreateCategoryCommand, UpdateCategoryCommand, CategoryListItemDTO } from '../../types';
 
 /**
  * Service layer for category-related operations
@@ -102,5 +102,55 @@ export class CategoryService {
       createdAt: category.created_at,
       updatedAt: category.updated_at,
     }));
+  }
+
+  /**
+   * Updates an existing category name
+   * 
+   * Business Rules:
+   * - Only the category name can be updated
+   * - Category must exist and belong to the authenticated user
+   * - New name must be unique per user (case-insensitive)
+   * - RLS policies enforce user ownership
+   * - Returns updated category with current item count
+   * 
+   * @param supabase - Supabase client with user session
+   * @param userId - ID of the authenticated user
+   * @param categoryId - ID of the category to update
+   * @param command - Category update command with validated name
+   * @returns Updated category as CategoryListItemDTO, or null if not found
+   * @throws {Error} If new name conflicts with existing category (code: '23505')
+   * @throws {Error} If database operation fails
+   */
+  static async updateCategory(
+    supabase: SupabaseClient<Database>,
+    userId: string,
+    categoryId: string,
+    command: UpdateCategoryCommand
+  ): Promise<CategoryListItemDTO | null> {
+    // Update and fetch with item count in single query
+    const { data, error } = await supabase
+      .from('categories')
+      .update({ name: command.name })
+      .eq('id', categoryId)
+      .eq('user_id', userId)
+      .select('id, name, created_at, updated_at, items(count)')
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      itemCount: data.items?.[0]?.count ?? 0,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
   }
 }
