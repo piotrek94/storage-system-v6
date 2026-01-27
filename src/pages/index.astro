@@ -69,26 +69,25 @@ const mockData: DashboardStatsDTO = {
 let dashboardData = mockData;
 let error: string | null = null;
 
-// TODO: Uncomment when /api/dashboard/stats endpoint is implemented
-// try {
-//   const response = await fetch(`${Astro.url.origin}/api/dashboard/stats`, {
-//     headers: {
-//       'Cookie': Astro.request.headers.get('Cookie') || '',
-//     },
-//   });
-//   
-//   if (!response.ok) {
-//     if (response.status === 401) {
-//       return Astro.redirect('/login');
-//     }
-//     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-//   }
-//   
-//   dashboardData = await response.json();
-// } catch (err) {
-//   error = err instanceof Error ? err.message : 'An unexpected error occurred';
-//   console.error('Dashboard data fetch error:', err);
-// }
+try {
+  const response = await fetch(`${Astro.url.origin}/api/dashboard/stats`, {
+    headers: {
+      'Cookie': Astro.request.headers.get('Cookie') || '',
+    },
+  });
+  
+  if (!response.ok) {
+    if (response.status === 401) {
+      return Astro.redirect('/login');
+    }
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  
+  dashboardData = await response.json();
+} catch (err) {
+  error = err instanceof Error ? err.message : 'An unexpected error occurred';
+  console.error('Dashboard data fetch error:', err);
+}
 ---
 
 <Layout title="Dashboard - Storage System">

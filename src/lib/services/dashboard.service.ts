@@ -68,8 +68,8 @@ export class DashboardService {
         .eq('user_id', userId)
         .eq('is_in', false),
 
-      // Query 5: Fetch 5 most recent items with related data
-      // Uses LEFT JOIN to include items without images
+      // Query 5: Fetch 5 most recent items with category and container
+      // Note: Images are fetched separately due to polymorphic relationship
       supabase
         .from('items')
         .select(`
@@ -78,12 +78,9 @@ export class DashboardService {
           is_in,
           created_at,
           categories!inner(name),
-          containers!inner(name),
-          images!left(storage_path)
+          containers!inner(name)
         `)
         .eq('user_id', userId)
-        .eq('images.entity_type', 'item')
-        .eq('images.display_order', 1)
         .order('created_at', { ascending: false })
         .limit(5),
     ]);
@@ -105,33 +102,47 @@ export class DashboardService {
       throw recentItemsResult.error;
     }
 
-    // Transform recent items to DTOs
-    const recentItems: RecentItemDTO[] = (recentItemsResult.data ?? []).map((item) => {
-      // Extract thumbnail storage path
-      // Items can have multiple images, we only need the first one (display_order = 1)
-      const storagePath = Array.isArray(item.images) && item.images.length > 0
-        ? item.images[0]?.storage_path
-        : null;
+    // If there are recent items, fetch their thumbnails
+    // Polymorphic relationship requires separate query
+    let itemThumbnails: Map<string, string | null> = new Map();
+    
+    if (recentItemsResult.data && recentItemsResult.data.length > 0) {
+      const itemIds = recentItemsResult.data.map((item) => item.id);
+      
+      // Fetch thumbnails (display_order = 1) for recent items
+      const { data: thumbnailsData, error: thumbnailsError } = await supabase
+        .from('images')
+        .select('entity_id, storage_path')
+        .eq('entity_type', 'item')
+        .eq('display_order', 1)
+        .in('entity_id', itemIds);
 
-      // Generate public URL for thumbnail if storage_path exists
-      let thumbnailUrl: string | null = null;
-      if (storagePath) {
-        try {
-          const { data } = supabase.storage
-            .from('item-images')
-            .getPublicUrl(storagePath);
-          thumbnailUrl = data.publicUrl;
-        } catch (error) {
-          // If URL generation fails, fallback to null
-          // Log error but don't fail the entire request
-          console.error('Failed to generate thumbnail URL:', error);
+      if (thumbnailsError) {
+        // Log error but continue without thumbnails
+        console.error('Failed to fetch thumbnails:', thumbnailsError);
+      } else if (thumbnailsData) {
+        // Build map of item_id -> thumbnail URL
+        for (const thumbnail of thumbnailsData) {
+          try {
+            const { data } = supabase.storage
+              .from('item-images')
+              .getPublicUrl(thumbnail.storage_path);
+            itemThumbnails.set(thumbnail.entity_id, data.publicUrl);
+          } catch (error) {
+            // If URL generation fails, set to null
+            console.error('Failed to generate thumbnail URL:', error);
+            itemThumbnails.set(thumbnail.entity_id, null);
+          }
         }
       }
+    }
 
+    // Transform recent items to DTOs
+    const recentItems: RecentItemDTO[] = (recentItemsResult.data ?? []).map((item) => {
       return {
         id: item.id,
         name: item.name,
-        thumbnail: thumbnailUrl,
+        thumbnail: itemThumbnails.get(item.id) ?? null,
         category: Array.isArray(item.categories) ? item.categories[0]?.name : item.categories?.name,
         container: Array.isArray(item.containers) ? item.containers[0]?.name : item.containers?.name,
         isIn: item.is_in,
