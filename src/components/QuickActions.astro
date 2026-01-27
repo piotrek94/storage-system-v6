@@ -1,0 +1,28 @@
+---
+import { Button } from "@/components/ui/button"
+import { Plus, Box, Tag } from "lucide-react"
+---
+
+<section class="space-y-4">
+  <h2 class="text-xl font-semibold">Quick Actions</h2>
+  <div class="flex flex-wrap gap-3">
+    <Button size="lg" asChild>
+      <a href="/items/new">
+        <Plus />
+        Add New Item
+      </a>
+    </Button>
+    <Button variant="outline" size="lg" asChild>
+      <a href="/containers/new">
+        <Box />
+        Add Container
+      </a>
+    </Button>
+    <Button variant="outline" size="lg" asChild>
+      <a href="/categories/new">
+        <Tag />
+        Add Category
+      </a>
+    </Button>
+  </div>
+</section>
