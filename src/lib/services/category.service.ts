@@ -153,4 +153,75 @@ export class CategoryService {
       updatedAt: data.updated_at,
     };
   }
+
+  /**
+   * Deletes a category if it has no associated items
+   * 
+   * Business Rules:
+   * - Category must exist and belong to the authenticated user
+   * - Category must have zero associated items (enforces referential integrity)
+   * - RLS policies enforce user ownership at database level
+   * - Returns category details on success, null if not found
+   * 
+   * @param supabase - Supabase client with user session
+   * @param userId - ID of the authenticated user
+   * @param categoryId - UUID of the category to delete
+   * @returns Object with category id and name if successful, null if not found
+   * @throws {Error} If category has associated items (with descriptive message)
+   * @throws {Error} If database operation fails
+   */
+  static async deleteCategory(
+    supabase: SupabaseClient<Database>,
+    userId: string,
+    categoryId: string
+  ): Promise<{ id: string; name: string } | null> {
+    // Step 1: Fetch category and verify ownership
+    const { data: category, error: fetchError } = await supabase
+      .from('categories')
+      .select('id, name, user_id')
+      .eq('id', categoryId)
+      .eq('user_id', userId)
+      .single();
+
+    // Return null if category not found or doesn't belong to user
+    if (fetchError || !category) {
+      return null;
+    }
+
+    // Step 2: Count associated items
+    const { count, error: countError } = await supabase
+      .from('items')
+      .select('id', { count: 'exact', head: true })
+      .eq('category_id', categoryId)
+      .eq('user_id', userId);
+
+    // Handle counting error
+    if (countError) {
+      throw countError;
+    }
+
+    // Step 3: Check if category has items (business rule enforcement)
+    if (count && count > 0) {
+      const itemWord = count === 1 ? 'item' : 'items';
+      throw new Error(`Cannot delete ${category.name} because it contains ${count} ${itemWord}`);
+    }
+
+    // Step 4: Delete category
+    const { error: deleteError } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', categoryId)
+      .eq('user_id', userId);
+
+    // Handle deletion error
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    // Return deleted category details
+    return {
+      id: category.id,
+      name: category.name,
+    };
+  }
 }
