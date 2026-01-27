@@ -1,0 +1,38 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import CategoriesList from '@/components/categories/CategoriesList';
+import { Toaster } from '@/components/ui/sonner';
+import type { CategoryListResponseDTO } from '@/types';
+
+// Authentication check
+const supabase = Astro.locals.supabase;
+const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+if (authError || !user) {
+  return Astro.redirect('/');
+}
+
+// Fetch initial categories data
+let initialCategories: CategoryListResponseDTO['data'] = [];
+try {
+  const response = await fetch(`${Astro.url.origin}/api/categories?sort=name&order=asc`, {
+    headers: {
+      cookie: Astro.request.headers.get('cookie') || '',
+    },
+  });
+  
+  if (response.ok) {
+    const data: CategoryListResponseDTO = await response.json();
+    initialCategories = data.data;
+  } else {
+    console.error('Failed to fetch categories:', response.status, response.statusText);
+  }
+} catch (error) {
+  console.error('Failed to fetch categories:', error);
+}
+---
+
+<Layout title="Categories">
+  <CategoriesList client:load initialCategories={initialCategories} />
+  <Toaster client:load />
+</Layout>

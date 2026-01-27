@@ -1,21 +1,35 @@
-/api/dashboard/stats
-/api/containers
-/api/containers/:id
-/api/containers
-/api/containers/:id
-/api/containers/:id
-/api/categories
-/api/categories/:id
-/api/categories
-/api/categories/:id
-/api/categories/:id
-/api/items
-/api/items/:id
-/api/items
-/api/items/:id
-/api/items/:id
-/api/items/:id/images
-/api/containers/:id/images
-/api/items/:itemId/images/:imageId
-/api/items/:itemId/images/:imageId
-/api/containers/:containerId/images/:imageId
+API
++  /api/dashboard/stats
+   /api/containers
+   /api/containers/:id
+   /api/containers
+   /api/containers/:id
+   /api/containers/:id
++  /api/categories
+   /api/categories/:id
++  /api/categories
+   /api/categories/:id
+   /api/categories/:id
+   /api/items
+   /api/items/:id
+   /api/items
+   /api/items/:id
+   /api/items/:id
+   /api/items/:id/images
+   /api/containers/:id/images
+   /api/items/:itemId/images/:imageId
+   /api/items/:itemId/images/:imageId
+   /api/containers/:containerId/images/:imageId
+
+UI
+/login
+/register
+/reset-password
+/ (default landing page after login)
+/items
+/items/[id]
+/items/new (create) or `/items/[id]/edit` (edit)
+/containers
+/containers/[id]
+/categories
+/profile
