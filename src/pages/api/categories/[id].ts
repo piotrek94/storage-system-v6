@@ -2,7 +2,6 @@ import type { APIRoute } from 'astro';
 import { updateCategorySchema, categoryIdParamSchema } from '../../../lib/validation/category.schema';
 import { CategoryService } from '../../../lib/services/category.service';
 import type { UpdateCategoryCommand, ErrorResponseDTO, CategoryListItemDTO, DeleteResponseDTO } from '../../../types';
-import { loginTestUser } from '@/lib/utils';
 
 export const prerender = false;
 
@@ -31,12 +30,9 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
 
   try {
     // Step 1: Authentication check (guard clause)
-    const supabase = locals.supabase;
-    const USER_ID: string = loginTestUser(supabase);
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const user = locals.user;
 
-    if (authError || !user) {
+    if (!user) {
       return new Response(
         JSON.stringify({
           error: {
@@ -50,6 +46,8 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
         }
       );
     }
+
+    const supabase = locals.supabase;
 
     // Step 2: Validate route parameter (guard clause)
     const paramValidation = categoryIdParamSchema.safeParse({ id: params.id });
@@ -122,7 +120,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
     // Step 6: Call service layer
     const category = await CategoryService.updateCategory(
       supabase,
-      USER_ID,
+      user.id,
       categoryId,
       command
     );
@@ -218,12 +216,9 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 
   try {
     // Step 1: Authentication check (guard clause)
-    const supabase = locals.supabase;
-    const USER_ID: string = loginTestUser(supabase);
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const user = locals.user;
 
-    if (authError || !user) {
+    if (!user) {
       return new Response(
         JSON.stringify({
           error: {
@@ -237,6 +232,8 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
         }
       );
     }
+
+    const supabase = locals.supabase;
 
     // Step 2: Validate route parameter (guard clause)
     const paramValidation = categoryIdParamSchema.safeParse({ id: params.id });
@@ -261,7 +258,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     // Step 3: Call service layer to delete category
     const result = await CategoryService.deleteCategory(
       supabase,
-      USER_ID,
+      user.id,
       categoryId
     );
 

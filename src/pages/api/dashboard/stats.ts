@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro';
 import { DashboardService } from '../../../lib/services/dashboard.service';
 import type { DashboardStatsDTO, ErrorResponseDTO } from '../../../types';
-import { loginTestUser } from '@/lib/utils';
 
 export const prerender = false;
 
@@ -22,14 +21,9 @@ export const GET: APIRoute = async ({ locals }) => {
 
   try {
     // Step 1: Authentication check (guard clause)
-    // Extract Supabase client from middleware-injected locals
-    const supabase = locals.supabase;
-    const USER_ID: string = loginTestUser(supabase);
+    const user = locals.user;
 
-    // Verify user session is valid
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!user) {
       return new Response(
         JSON.stringify({
           error: {
@@ -46,9 +40,10 @@ export const GET: APIRoute = async ({ locals }) => {
 
     // Step 2: Call service layer to fetch dashboard statistics
     // Service executes parallel queries for optimal performance
+    const supabase = locals.supabase;
     const stats: DashboardStatsDTO = await DashboardService.getStatistics(
       supabase,
-      USER_ID
+      user.id
     );
 
     // Step 3: Return success response with statistics

@@ -1,0 +1,18 @@
+---
+import AuthLayout from '@/layouts/AuthLayout.astro';
+import ResetPasswordConfirmForm from '@/components/auth/ResetPasswordConfirmForm';
+import { Toaster } from '@/components/ui/sonner';
+
+// Extract token from query parameters
+const token = Astro.url.searchParams.get('token');
+
+// If no token, show error
+if (!token) {
+  return Astro.redirect('/reset-password');
+}
+---
+
+<AuthLayout title="Reset Password - Home Storage System">
+  <ResetPasswordConfirmForm client:load token={token} />
+  <Toaster client:load />
+</AuthLayout>

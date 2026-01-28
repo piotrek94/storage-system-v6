@@ -7,12 +7,14 @@ import { CategoryService } from '@/lib/services/category.service';
 
 
 // Authentication check
-const supabase = Astro.locals.supabase;
-const { data: { user }, error: authError } = await supabase.auth.getUser();
+const user = Astro.locals.user;
 
-if (authError || !user) {
-  return Astro.redirect('/');
+if (!user) {
+  const returnTo = encodeURIComponent(Astro.url.pathname + Astro.url.search);
+  return Astro.redirect(`/login?returnTo=${returnTo}`);
 }
+
+const supabase = Astro.locals.supabase;
 
 
 // Direct service call - no HTTP overhead

@@ -334,3 +334,88 @@ export interface ErrorResponseDTO {
     }[];
   };
 }
+
+// =============================================================================
+// Authentication DTOs
+// =============================================================================
+
+/**
+ * User data returned from authentication operations
+ */
+export interface UserDTO {
+  id: string;
+  email: string;
+  createdAt?: string;
+}
+
+/**
+ * Login request body
+ * Used for: POST /api/auth/login
+ */
+export interface LoginCommand {
+  email: string;
+  password: string;
+}
+
+/**
+ * Registration request body
+ * Used for: POST /api/auth/register
+ */
+export interface RegisterCommand {
+  email: string;
+  password: string;
+  passwordConfirm: string;
+}
+
+/**
+ * Password reset request body
+ * Used for: POST /api/auth/reset-password
+ */
+export interface ResetPasswordCommand {
+  email: string;
+}
+
+/**
+ * Password reset confirmation body
+ * Used for: POST /api/auth/reset-password/confirm
+ */
+export interface ResetPasswordConfirmCommand {
+  token: string;
+  password: string;
+  passwordConfirm: string;
+}
+
+/**
+ * Login response
+ */
+export interface LoginResponseDTO {
+  user: UserDTO;
+}
+
+/**
+ * Registration response
+ */
+export interface RegisterResponseDTO {
+  user: UserDTO;
+}
+
+/**
+ * Logout response
+ */
+export interface LogoutResponseDTO {
+  message: string;
+}
+
+/**
+ * Password reset response
+ */
+export interface ResetPasswordResponseDTO {
+  message: string;
+}
+
+/**
+ * Session response (from GET /api/auth/session)
+ */
+export interface SessionResponseDTO {
+  user: UserDTO | null;
+}

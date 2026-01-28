@@ -1,0 +1,133 @@
+---
+import Layout from "../layouts/Layout.astro"
+import { StatsGrid } from "@/components/StatsGrid"
+import QuickActions from "@/components/QuickActions.astro"
+import { RecentItems } from "@/components/RecentItems"
+import type { DashboardStatsDTO } from "@/types"
+
+// Authentication check
+const user = Astro.locals.user;
+if (!user) {
+  const returnTo = encodeURIComponent(Astro.url.pathname + Astro.url.search);
+  return Astro.redirect(`/login?returnTo=${returnTo}`);
+}
+
+// Fetch dashboard data from API
+const mockData: DashboardStatsDTO = {
+  totalItems: 150,
+  totalContainers: 12,
+  totalCategories: 8,
+  itemsOut: 5,
+  recentItems: [
+    {
+      id: "uuid-1",
+      name: "Camping Tent",
+      thumbnail: null,
+      category: "Outdoor Gear",
+      container: "Garage Box A",
+      isIn: true,
+      createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+    },
+    {
+      id: "uuid-2",
+      name: "Cordless Drill",
+      thumbnail: null,
+      category: "Tools",
+      container: "Basement Shelf 2",
+      isIn: false,
+      createdAt: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+    },
+    {
+      id: "uuid-3",
+      name: "Winter Jacket",
+      thumbnail: null,
+      category: "Clothing",
+      container: "Closet Box 3",
+      isIn: true,
+      createdAt: new Date(Date.now() - 10800000).toISOString(), // 3 hours ago
+    },
+    {
+      id: "uuid-4",
+      name: "Board Game Collection",
+      thumbnail: null,
+      category: "Entertainment",
+      container: "Living Room Cabinet",
+      isIn: true,
+      createdAt: new Date(Date.now() - 14400000).toISOString(), // 4 hours ago
+    },
+    {
+      id: "uuid-5",
+      name: "Camping Stove",
+      thumbnail: null,
+      category: "Outdoor Gear",
+      container: "Garage Box A",
+      isIn: true,
+      createdAt: new Date(Date.now() - 18000000).toISOString(), // 5 hours ago
+    },
+  ],
+};
+
+let dashboardData = mockData;
+let error: string | null = null;
+
+try {
+  const response = await fetch(`${Astro.url.origin}/api/dashboard/stats`, {
+    headers: {
+      'Cookie': Astro.request.headers.get('Cookie') || '',
+    },
+  });
+  
+  if (!response.ok) {
+    if (response.status === 401) {
+      return Astro.redirect('/login');
+    }
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+  
+  dashboardData = await response.json();
+} catch (err) {
+  error = err instanceof Error ? err.message : 'An unexpected error occurred';
+  console.error('Dashboard data fetch error:', err);
+}
+---
+
+<Layout title="Dashboard - Storage System">
+  <main class="container mx-auto px-4 py-8 max-w-7xl">
+    <h1 class="text-3xl font-bold mb-8">Dashboard</h1>
+    
+    {error ? (
+      <div class="rounded-lg border border-destructive bg-destructive/10 p-6 text-center">
+        <p class="text-destructive font-medium mb-4">{error}</p>
+        <button
+          onclick="location.reload()"
+          class="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          Retry
+        </button>
+      </div>
+    ) : (
+      <>
+        <!-- Statistics Section -->
+        <section class="mb-8">
+          <StatsGrid
+            totalItems={dashboardData.totalItems}
+            totalContainers={dashboardData.totalContainers}
+            totalCategories={dashboardData.totalCategories}
+            itemsOut={dashboardData.itemsOut}
+            client:load
+          />
+        </section>
+        
+        <!-- Quick Actions Section -->
+        <section class="mb-8">
+          <QuickActions />
+        </section>
+        
+        <!-- Recent Items Section -->
+        <section>
+          <RecentItems items={dashboardData.recentItems} client:load />
+        </section>
+      </>
+    )}
+  </main>
+</Layout>

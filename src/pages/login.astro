@@ -1,0 +1,27 @@
+---
+import AuthLayout from '@/layouts/AuthLayout.astro';
+import LoginForm from '@/components/auth/LoginForm';
+import { Toaster } from '@/components/ui/sonner';
+
+// Check for existing session and redirect if authenticated
+const user = Astro.locals.user;
+if (user) {
+  return Astro.redirect('/dashboard');
+}
+
+// Validate and sanitize redirect destination
+const ALLOWED_REDIRECTS = ['/dashboard', '/categories', '/items', '/containers'];
+const returnToParam = Astro.url.searchParams.get('returnTo');
+let redirectTo: string | undefined;
+
+if (returnToParam) {
+  // Check if the returnTo path starts with any allowed redirect
+  const isAllowed = ALLOWED_REDIRECTS.some((path) => returnToParam.startsWith(path));
+  redirectTo = isAllowed ? returnToParam : undefined;
+}
+---
+
+<AuthLayout title="Login - Home Storage System">
+  <LoginForm client:load redirectTo={redirectTo} />
+  <Toaster client:load />
+</AuthLayout>

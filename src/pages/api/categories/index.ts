@@ -2,7 +2,6 @@ import type { APIRoute } from 'astro';
 import { createCategorySchema, listCategoriesQuerySchema } from '../../../lib/validation/category.schema';
 import { CategoryService } from '../../../lib/services/category.service';
 import type { CreateCategoryCommand, ErrorResponseDTO, CategoryListResponseDTO } from '../../../types';
-import { loginTestUser } from '@/lib/utils';
 
 export const prerender = false;
 
@@ -27,12 +26,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     // Step 1: Authentication check
-    const supabase = locals.supabase;
-    const USER_ID: string = loginTestUser(supabase);
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const user = locals.user;
 
-    if (authError || !user) {
+    if (!user) {
       return new Response(
         JSON.stringify({
           error: {
@@ -46,6 +42,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       );
     }
+
+    const supabase = locals.supabase;
 
     // Step 2: Parse request body
     let body: unknown;
@@ -98,7 +96,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Step 5: Call service layer
     const category = await CategoryService.createCategory(
       supabase,
-      USER_ID,
+      user.id,
       command
     );
 
@@ -173,11 +171,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
   
   try {
     // Step 1: Authentication check (guard clause)
-    const supabase = locals.supabase;
-    const USER_ID: string = loginTestUser(supabase);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const user = locals.user;
 
-    if (authError || !user) {
+    if (!user) {
       return new Response(
         JSON.stringify({
           error: {
@@ -191,6 +187,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         }
       );
     }
+
+    const supabase = locals.supabase;
 
     // Step 2: Extract query parameters
     const url = new URL(request.url);
@@ -226,7 +224,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Step 4: Call service layer to retrieve categories
     const categories = await CategoryService.listCategories(
       supabase,
-      USER_ID,
+      user.id,
       validation.data.sort,
       validation.data.order
     );
