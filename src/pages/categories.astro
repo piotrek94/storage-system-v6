@@ -2,7 +2,9 @@
 import Layout from '@/layouts/Layout.astro';
 import CategoriesList from '@/components/categories/CategoriesList';
 import { Toaster } from '@/components/ui/sonner';
-import type { CategoryListResponseDTO } from '@/types';
+import type { CategoryListItemDTO } from '@/types';
+import { CategoryService } from '@/lib/services/category.service';
+
 
 // Authentication check
 const supabase = Astro.locals.supabase;
@@ -12,21 +14,16 @@ if (authError || !user) {
   return Astro.redirect('/');
 }
 
-// Fetch initial categories data
-let initialCategories: CategoryListResponseDTO['data'] = [];
+
+// Direct service call - no HTTP overhead
+let initialCategories: CategoryListItemDTO[] = [];
 try {
-  const response = await fetch(`${Astro.url.origin}/api/categories?sort=name&order=asc`, {
-    headers: {
-      cookie: Astro.request.headers.get('cookie') || '',
-    },
-  });
-  
-  if (response.ok) {
-    const data: CategoryListResponseDTO = await response.json();
-    initialCategories = data.data;
-  } else {
-    console.error('Failed to fetch categories:', response.status, response.statusText);
-  }
+  initialCategories = await CategoryService.listCategories(
+    supabase,
+    user.id,
+    'name',
+    'asc'
+  );
 } catch (error) {
   console.error('Failed to fetch categories:', error);
 }
